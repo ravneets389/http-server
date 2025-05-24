@@ -18,10 +18,11 @@ class HttpServer:
         with client_socket:
             try:    
                 request_data = client_socket.recv(1024).decode()
-                print(f"Request: {request_data}")
+                # print(f"Request: {request_data}")
             except Exception as e:
                 print("Error:",e)
             
+            self.parse_request(request_data)
             response_data = (
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: text/plain\r\n"
@@ -30,6 +31,21 @@ class HttpServer:
                 "Hello, World!"
             )
             client_socket.sendall(response_data.encode())
+    
+    def parse_request(self, request_data):
+        #start line looks like : <method> <request-target> <protocol> ex. POST /index HTTP/1.1
+        #typical structure is start lines, headers and (CRLF) then body
+        header_part, _, body = request_data.partition("\r\n\r\n")
+        req_lines = header_part.splitlines()
+        
+        method,path,req_protocol = req_lines[0].split()
+        headers = {}
+        for line in req_lines[1:]:
+            key, value = line.split(":",1)
+            headers[key.strip()] = value.strip()
+        
+        # print(headers,body)
+        return method, path, headers, body
 
 if __name__ == "__main__":
     server = HttpServer()
