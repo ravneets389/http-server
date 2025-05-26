@@ -17,12 +17,29 @@ class HttpServer:
     def handle_request(self, client_socket):
         with client_socket:
             try:    
-                request_data = client_socket.recv(1024).decode()
+                # for repeated large concatenations, use a list - append , and copy at last
+                chunks = []
+                request_data = ""
+                while True:
+                    chunk = client_socket.recv(1024)
+                    if not chunk:
+                        break
+                    request_data += chunk.decode()
+                    if '\r\n\r\n' in request_data:
+                        break #end of headers (might have some body content too in it)
+                
                 # print(f"Request: {request_data}")
+                method, path, headers, body = self.parse_request(request_data)
+                
+                #parse remaining body
+                content_length = int(headers['Content-Length'])
+                while len(body) < content_length:
+                    chunk = client_socket.recv(1024)
+                    body += chunk.decode()
+                
             except Exception as e:
                 print("Error:",e)
             
-            self.parse_request(request_data)
             response_data = (
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: text/plain\r\n"
@@ -46,6 +63,7 @@ class HttpServer:
         
         # print(headers,body)
         return method, path, headers, body
+    
 
 if __name__ == "__main__":
     server = HttpServer()
