@@ -32,7 +32,7 @@ class HttpServer:
                 method, path, headers, body = self.parse_request(request_data)
                 
                 #parse remaining body
-                content_length = int(headers['Content-Length'])
+                content_length = int(headers.get('Content-Length',0)) #guard against missing content-length
                 while len(body) < content_length:
                     chunk = client_socket.recv(1024)
                     body += chunk.decode()
@@ -40,15 +40,12 @@ class HttpServer:
             except Exception as e:
                 print("Error:",e)
             
-            response_data = (
-                "HTTP/1.1 200 OK\r\n"
-                "Content-Type: text/plain\r\n"
-                "Content-Length: 13\r\n"
-                "\r\n"
-                "Hello, World!"
-            )
-            client_socket.sendall(response_data.encode())
-    
+
+            response_body = self.request_actions(method,path,headers,body)
+            response_data = self.make_response(response_body)
+            
+            client_socket.sendall(response_data)
+        
     def parse_request(self, request_data):
         #start line looks like : <method> <request-target> <protocol> ex. POST /index HTTP/1.1
         #typical structure is start lines, headers and (CRLF) then body
@@ -64,7 +61,34 @@ class HttpServer:
         # print(headers,body)
         return method, path, headers, body
     
-
+    def request_actions(self, method, path, headers, body):
+        if method == "GET":
+            if path == "/":
+                content = "This is the homepage"
+            elif path == "/about":
+                content = "This is the about page"
+            else:
+                content = "404 Not Found"
+        elif method == "POST":
+            if path == "/echo":
+                content = f"You sent: {body}"
+            else:
+                content = "404 Not Found"
+        else:
+            content = "405 Method Not Allowed"
+        
+        return content
+        
+        
+    def make_response(self,content, status_code=200, content_type="text/plain"):
+        body = content.encode()
+        return (
+            f"HTTP/1.1 {status_code} OK\r\n"
+            f"Content-Type: {content_type}\r\n"
+            f"Content-Length: {len(body)}\r\n"
+            "\r\n"
+        ).encode() + body
+    
 if __name__ == "__main__":
     server = HttpServer()
     server.start()
