@@ -1,4 +1,5 @@
 import socket
+import os
 
 class HttpServer:
     def __init__(self, host='0.0.0.0', port=8080):
@@ -41,8 +42,8 @@ class HttpServer:
                 print("Error:",e)
             
 
-            response_body = self.request_actions(method,path,headers,body)
-            response_data = self.make_response(response_body)
+            response_body, status_code, content_type = self.request_actions(method,path,headers,body)
+            response_data = self.make_response(response_body, status_code, content_type)
             
             client_socket.sendall(response_data)
         
@@ -63,32 +64,59 @@ class HttpServer:
     
     def request_actions(self, method, path, headers, body):
         if method == "GET":
-            if path == "/":
-                content = "This is the homepage"
-            elif path == "/about":
-                content = "This is the about page"
+            f_path = path + ".html"
+            file_path = os.path.join("public", f_path.lstrip("/"))
+
+            if os.path.isfile(file_path):
+                with open(file_path,"rb") as file:
+                    content = file.read()
+                return content,200,self.guess_content_type(file_path)
             else:
-                content = "404 Not Found"
+                return b"404 Not Found",404,"text/plain"
+            
         elif method == "POST":
             if path == "/echo":
                 content = f"You sent: {body}"
+                return content.encode(), 200, "text/plain"
+            if path == "/greet":
+                name = body.strip()
+                content = f"Hi there! {name}."
+                return content.encode(),200,"text/plain"
             else:
                 content = "404 Not Found"
+                return content.encode(),404,"text/plain"
+            
         else:
-            content = "405 Method Not Allowed"
-        
-        return content
-        
-        
+            content = b"405 Method Not Allowed"
+            return content,405,"text/plain"
+
     def make_response(self,content, status_code=200, content_type="text/plain"):
-        body = content.encode()
+        body = content
+        status_messages = {200: "OK", 404: "Not Found", 405: "Method Not Allowed"}
+
         return (
-            f"HTTP/1.1 {status_code} OK\r\n"
+            f"HTTP/1.1 {status_code} {status_messages.get(status_code,"Unknown")}\r\n"
             f"Content-Type: {content_type}\r\n"
             f"Content-Length: {len(body)}\r\n"
             "\r\n"
         ).encode() + body
     
+    def guess_content_type(self, file_path):
+        if file_path.endswith(".html"):
+            return "text/html"
+        elif file_path.endswith(".css"):
+            return "text/css"
+        elif file_path.endswith(".js"):
+            return "application/javascript"
+        elif file_path.endswith(".png"):
+            return "image/png"
+        elif file_path.endswith(".jpg") or file_path.endswith(".jpeg"):
+            return "image/jpeg"
+        elif file_path.endswith(".json"):
+            return "application/json"
+        else:
+            return "application/octet-stream"
+
 if __name__ == "__main__":
     server = HttpServer()
     server.start()
