@@ -1,0 +1,14 @@
+http-server/
+├── main.py                      # Entry point
+├── server/                      # server logic lives here
+│   ├── __init__.py
+│   ├── http_server.py           # HttpServer class
+│   ├── request_parser.py        # Request parsing logic
+│   ├── response_builder.py      # Response construction
+│   ├── route_handler.py         # Logic for GET/POST paths
+│   └── utils.py                 # Helper functions (e.g., content-type guessing)
+├── public/                      # Static files (HTML, images, etc.)
+│   └── index.html
+├── templates/
+│   └── greet.html
+
