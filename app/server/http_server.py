@@ -3,6 +3,7 @@ import threading
 from .request_parser import parse_request
 from .response_builder import make_response
 from .route_handler import handle_route
+from .logger import log_info, log_error
 
 class HttpServer:
     def __init__(self, host='0.0.0.0', port=8080):
@@ -39,9 +40,12 @@ class HttpServer:
                 while len(body) < content_length:
                     body += client_socket.recv(1024).decode()
 
-                content, status, content_type = handle_route(method, path, headers, body)
-                response_data = make_response(content, status, content_type)
+                log_info(f"Received {method} request for {path}")
+                content, status_code, content_type = handle_route(method, path, headers, body)
+                log_info(f"Responding with {status_code} for {method} {path}")
+
+                response_data = make_response(content, status_code, content_type)
                 client_socket.sendall(response_data)
 
             except Exception as e:
-                print("Error:", e)
+                log_error(f"Exception while handling request: {e}")
