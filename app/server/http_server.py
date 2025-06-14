@@ -1,4 +1,5 @@
 import socket
+import threading
 from .request_parser import parse_request
 from .response_builder import make_response
 from .route_handler import handle_route
@@ -11,10 +12,13 @@ class HttpServer:
 
     def start(self):
         self.server_socket = socket.create_server((self.host, self.port))
+        self.server_socket.listen(5)
         print(f"Server is running on {self.host}:{self.port}")
 
         while True:
             client_socket, _ = self.server_socket.accept()
+            thread = threading.Thread(target=self.handle_request, args= (client_socket), daemon=True)
+            thread.start()
             self.handle_request(client_socket)
 
     def handle_request(self, client_socket):
